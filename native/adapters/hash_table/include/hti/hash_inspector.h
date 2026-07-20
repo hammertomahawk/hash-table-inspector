@@ -180,6 +180,11 @@ hti_status_t hti_operation_result_json(
     char **out_json,
     size_t *out_size);
 
+hti_status_t hti_timeline_json(
+    const hti_session_t *session,
+    char **out_json,
+    size_t *out_size);
+
 void hti_json_free(char *json);
 bool hti_demo_key_is_valid(const void *key, size_t key_size);
 

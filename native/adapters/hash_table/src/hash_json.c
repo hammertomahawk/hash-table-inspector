@@ -272,6 +272,56 @@ hti_status_t hti_operation_result_json(
     return HTI_OK;
 }
 
+hti_status_t hti_timeline_json(
+    const hti_session_t *session,
+    char **out_json,
+    size_t *out_size)
+{
+    hti_json_builder_t builder = {0};
+    size_t frame_count;
+    size_t frame_index;
+
+    if (session == NULL || out_json == NULL || out_size == NULL) {
+        return HTI_INVALID_ARGUMENT;
+    }
+    *out_json = NULL;
+    *out_size = 0U;
+    frame_count = hti_session_timeline_count(session);
+
+    if (!hti_json_append_format(
+            &builder,
+            "{\"version\":%" PRIu32 ",\"frames\":[",
+            HTI_JSON_CONTRACT_VERSION)) {
+        free(builder.data);
+        return HTI_NO_MEMORY;
+    }
+    for (frame_index = 0U; frame_index < frame_count; ++frame_index) {
+        hti_frame_view_t frame;
+        hti_status_t status = hti_session_frame_at(
+            session,
+            frame_index,
+            &frame);
+        if (status != HTI_OK) {
+            free(builder.data);
+            return status;
+        }
+        if ((frame_index != 0U &&
+             !hti_json_append_raw(&builder, ",", 1U)) ||
+            !hti_json_append_frame(&builder, &frame)) {
+            free(builder.data);
+            return HTI_NO_MEMORY;
+        }
+    }
+    if (!hti_json_append_raw(&builder, "]}", 2U)) {
+        free(builder.data);
+        return HTI_NO_MEMORY;
+    }
+
+    *out_json = builder.data;
+    *out_size = builder.length;
+    return HTI_OK;
+}
+
 void hti_json_free(char *json)
 {
     free(json);

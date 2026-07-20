@@ -320,6 +320,16 @@ static bool test_four_to_eight_rehash_and_json(void)
     CHECK(strstr(json, "\"key\":\"four\"") != NULL);
     hti_json_free(json);
 
+    CHECK(hti_timeline_json(session, &json, &json_size) == HTI_OK);
+    CHECK(json != NULL);
+    CHECK(json_size == strlen(json));
+    CHECK(strstr(json, "\"version\":1") != NULL);
+    CHECK(strstr(json, "\"event\":\"session_created\"") != NULL);
+    CHECK(strstr(json, "\"event\":\"rehash_begin\"") != NULL);
+    CHECK(strstr(json, "\"event\":\"rehash_end\"") != NULL);
+    CHECK(strstr(json, "\"key\":\"four\"") != NULL);
+    hti_json_free(json);
+
     CHECK(!hti_demo_key_is_valid("bad key", strlen("bad key")));
     CHECK(hti_session_put(
         session,
