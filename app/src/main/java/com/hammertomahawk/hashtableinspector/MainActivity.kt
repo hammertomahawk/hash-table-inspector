@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -30,27 +31,23 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import java.io.Closeable
 
 class MainActivity : ComponentActivity() {
+    private val inspectorViewModel: InspectorViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val controller = remember { InspectorController() }
-            DisposableEffect(controller) {
-                onDispose { controller.close() }
-            }
             val colorScheme = if (isSystemInDarkTheme()) {
                 darkColorScheme()
             } else {
@@ -58,133 +55,18 @@ class MainActivity : ComponentActivity() {
             }
             MaterialTheme(colorScheme = colorScheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    InspectorScreen(controller)
+                    InspectorScreen(inspectorViewModel)
                 }
             }
-        }
-    }
-}
-
-internal class InspectorController : Closeable {
-    private var session = NativeHashSession.create()
-
-    var frames by mutableStateOf(session.timeline())
-        private set
-    var selectedFrameId by mutableStateOf(frames.lastOrNull()?.frameId)
-        private set
-    var outcome by mutableStateOf("Native session created")
-        private set
-    var quarantined by mutableStateOf(false)
-        private set
-
-    val selectedFrame: InspectionFrame?
-        get() = frames.firstOrNull { it.frameId == selectedFrameId }
-
-    val viewingLive: Boolean
-        get() = selectedFrameId != null && selectedFrameId == frames.lastOrNull()?.frameId
-
-    fun put(key: String, value: Long) = consume("Put") {
-        session.put(key, value)
-    }
-
-    fun lookup(key: String) = consume("Lookup") {
-        session.lookup(key)
-    }
-
-    fun delete(key: String) = consume("Delete") {
-        session.delete(key)
-    }
-
-    fun validate() = consume("Validate") {
-        session.validate()
-    }
-
-    fun corruptSize() = consume("Corrupt size") {
-        session.corruptSize()
-    }
-
-    fun restore() = consume("Restore") {
-        session.restore()
-    }
-
-    fun reset() {
-        try {
-            val replacement = NativeHashSession.create()
-            session.close()
-            session = replacement
-            frames = session.timeline()
-            selectedFrameId = frames.lastOrNull()?.frameId
-            quarantined = false
-            outcome = "Native session reset"
-        } catch (error: RuntimeException) {
-            outcome = "Reset failed: ${error.message ?: error.javaClass.simpleName}"
-        }
-    }
-
-    fun runDeterministicDemo() {
-        reset()
-        put("a", 1)
-        put("b", 2)
-        lookup("a")
-        lookup("missing")
-        put("a", 11)
-        delete("b")
-        put("b", 2)
-        put("c", 3)
-        put("d", 4)
-        validate()
-        corruptSize()
-        validate()
-        outcome = "Demo complete: collision and rehash are in history; size corruption is active"
-    }
-
-    fun selectFrame(frameId: Long) {
-        if (frames.any { it.frameId == frameId }) {
-            selectedFrameId = frameId
-        }
-    }
-
-    fun selectLive() {
-        selectedFrameId = frames.lastOrNull()?.frameId
-    }
-
-    fun reportInputError(message: String) {
-        outcome = message
-    }
-
-    override fun close() {
-        session.close()
-    }
-
-    private fun consume(
-        label: String,
-        operation: () -> NativeOperationResult,
-    ) {
-        try {
-            val result = operation()
-            if (result.frames.isNotEmpty()) {
-                frames = (frames + result.frames).takeLast(64)
-                selectedFrameId = frames.last().frameId
-            }
-            result.frames.forEach { frame ->
-                when (frame.event) {
-                    "size_corruption_applied" -> quarantined = true
-                    "clean_state_restored" -> quarantined = false
-                }
-            }
-            val value = result.value?.let { ", value=$it" }.orEmpty()
-            outcome = "$label: ${result.status} / ${result.tableStatus}$value"
-        } catch (error: RuntimeException) {
-            outcome = "$label failed: ${error.message ?: error.javaClass.simpleName}"
         }
     }
 }
 
 @Composable
-private fun InspectorScreen(controller: InspectorController) {
-    var key by remember { mutableStateOf("a") }
-    var value by remember { mutableStateOf("1") }
-    val selected = controller.selectedFrame
+private fun InspectorScreen(viewModel: InspectorViewModel) {
+    var key by rememberSaveable { mutableStateOf("a") }
+    var value by rememberSaveable { mutableStateOf("1") }
+    val selected = viewModel.selectedFrame
 
     LazyColumn(
         modifier = Modifier
@@ -237,19 +119,19 @@ private fun InspectorScreen(controller: InspectorController) {
                     onClick = {
                         val parsed = value.toLongOrNull()
                         if (parsed == null) {
-                            controller.reportInputError("Value must be a signed 64-bit integer")
+                            viewModel.reportInputError("Value must be a signed 64-bit integer")
                         } else {
-                            controller.put(key, parsed)
+                            viewModel.put(key, parsed)
                         }
                     },
                 ) { Text("Put") }
                 Button(
                     modifier = Modifier.weight(1f),
-                    onClick = { controller.lookup(key) },
+                    onClick = { viewModel.lookup(key) },
                 ) { Text("Lookup") }
                 Button(
                     modifier = Modifier.weight(1f),
-                    onClick = { controller.delete(key) },
+                    onClick = { viewModel.delete(key) },
                 ) { Text("Delete") }
             }
         }
@@ -261,17 +143,17 @@ private fun InspectorScreen(controller: InspectorController) {
             ) {
                 OutlinedButton(
                     modifier = Modifier.weight(1f),
-                    onClick = controller::validate,
+                    onClick = viewModel::validate,
                 ) { Text("Validate") }
                 OutlinedButton(
                     modifier = Modifier.weight(1f),
-                    onClick = controller::corruptSize,
-                    enabled = !controller.quarantined,
+                    onClick = viewModel::corruptSize,
+                    enabled = !viewModel.quarantined,
                 ) { Text("Corrupt") }
                 OutlinedButton(
                     modifier = Modifier.weight(1f),
-                    onClick = controller::restore,
-                    enabled = controller.quarantined,
+                    onClick = viewModel::restore,
+                    enabled = viewModel.quarantined,
                 ) { Text("Restore") }
             }
         }
@@ -283,9 +165,9 @@ private fun InspectorScreen(controller: InspectorController) {
             ) {
                 Button(
                     modifier = Modifier.weight(1f),
-                    onClick = controller::runDeterministicDemo,
+                    onClick = viewModel::runDeterministicDemo,
                 ) { Text("Run deterministic demo") }
-                OutlinedButton(onClick = controller::reset) { Text("Reset") }
+                OutlinedButton(onClick = viewModel::reset) { Text("Reset") }
             }
         }
 
@@ -293,8 +175,8 @@ private fun InspectorScreen(controller: InspectorController) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Outcome", fontWeight = FontWeight.Bold)
-                    Text(controller.outcome)
-                    Text(if (controller.quarantined) "Session: QUARANTINED" else "Session: operational")
+                    Text(viewModel.outcome)
+                    Text(if (viewModel.quarantined) "Session: QUARANTINED" else "Session: operational")
                 }
             }
         }
@@ -303,8 +185,8 @@ private fun InspectorScreen(controller: InspectorController) {
             item {
                 SnapshotSummary(
                     frame = selected,
-                    isLive = controller.viewingLive,
-                    onLive = controller::selectLive,
+                    isLive = viewModel.viewingLive,
+                    onLive = viewModel::selectLive,
                 )
             }
             item {
@@ -320,18 +202,18 @@ private fun InspectorScreen(controller: InspectorController) {
 
         item {
             Text(
-                "Timeline · newest first · ${controller.frames.size}/64 frames",
+                "Timeline · newest first · ${viewModel.frames.size}/64 frames",
                 style = MaterialTheme.typography.titleLarge,
             )
         }
         items(
-            items = controller.frames.asReversed(),
+            items = viewModel.frames.asReversed(),
             key = { frame -> frame.frameId },
         ) { frame ->
             TimelineCard(
                 frame = frame,
-                selected = frame.frameId == controller.selectedFrameId,
-                onClick = { controller.selectFrame(frame.frameId) },
+                selected = frame.frameId == viewModel.selectedFrameId,
+                onClick = { viewModel.selectFrame(frame.frameId) },
             )
         }
     }
@@ -355,14 +237,18 @@ private fun SnapshotSummary(
         ),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    if (isLive) "LIVE frame ${frame.frameId}" else "HISTORICAL frame ${frame.frameId}",
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.Bold,
-                )
-                if (!isLive) {
-                    OutlinedButton(onClick = onLive) { Text("Live") }
+            Text(
+                if (isLive) "LIVE frame ${frame.frameId}" else "HISTORICAL frame ${frame.frameId}",
+                fontWeight = FontWeight.Bold,
+            )
+            if (!isLive) {
+                Button(
+                    onClick = onLive,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                ) {
+                    Text("Return to live")
                 }
             }
             Text("Event: ${frame.event} · operation ${frame.operationId}")
