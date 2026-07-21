@@ -5,9 +5,10 @@ byte-key-to-`int64_t` hash table and renders copied native events and
 snapshots in an Android app built with Kotlin, JNI, and Jetpack Compose. The C
 table is the only live source of truth.
 
-Status: the host-native sanitizer suite passes, and the first Android/JNI/
-Compose vertical slice assembles successfully for `arm64-v8a`. Physical Galaxy
-S25 Ultra installation and validation are intentionally deferred.
+Status: the host-native sanitizer suite passes, and the Android/JNI/Compose
+slice builds for `arm64-v8a` and is physically validated on a Samsung Galaxy
+S25 Ultra running API 36. See the consolidated
+[physical-device validation](docs/device-validation.md) evidence.
 
 ## Run the native suite
 
@@ -52,12 +53,14 @@ UBSan remain enabled.
 - Versioned copied JSON v1 operation results. Demo adapter keys are limited to
   1-32 safe ASCII bytes `[A-Za-z0-9._-]`; the table core remains binary-key
   capable.
-- Android submission target: one physical Samsung Galaxy S25 Ultra over
-  wireless ADB, `arm64-v8a` only.
+- Android submission target: one physical Samsung Galaxy S25 Ultra, validated
+  over USB ADB, `arm64-v8a` only.
 
 The canonical design, ownership rules, C API, planned JNI boundary, milestones,
 risks, and acceptance criteria are in
 [docs/architecture-plan.md](docs/architecture-plan.md).
+Automated device evidence, manual UI findings, and current limitations are in
+[docs/device-validation.md](docs/device-validation.md).
 
 ## Architecture
 
@@ -85,6 +88,7 @@ native/tests/                deterministic host-native coverage
 app/                         arm64-only Kotlin and Compose Android app
 scripts/test-native.sh       direct Bash + Clang test entry point
 docs/architecture-plan.md    canonical approved plan
+docs/device-validation.md    consolidated physical-device evidence
 ```
 
 Inspection and corruption are behind `HT_ENABLE_INSPECTION` and
@@ -123,13 +127,15 @@ Toolchain verified on 2026-07-20 without changing the installation:
   Bash + Clang entry points.
 
 No Android Studio, SDK, Build-Tools, Platform-Tools, NDK, CMake, or JBR package
-was installed or updated by this work. One local
+was installed or updated by this work. One early local
 `~/Library/Android/sdk/platform-tools/adb devices -l` attempt tried to start the
 ADB server but failed with `ADB server didn't ACK` and `failed to start daemon`.
-The user declined a retry because the Mac and Galaxy S25 Ultra were not yet on
-the same network. No pairing, connection, authorization, APK installation,
-launch, or physical-device validation occurred; further ADB diagnosis and
-device work remain deferred.
+At that checkpoint, the user declined a retry because the Mac and phone were
+not on the same network, and no device contact occurred. Later, the authorized
+Galaxy S25 Ultra connected over USB; APK installation, cold launch, runtime
+health checks, and human UI validation succeeded. The historical failure and
+later successful evidence are consolidated in
+[docs/device-validation.md](docs/device-validation.md).
 
 ## Explicitly deferred hardening
 
@@ -137,8 +143,7 @@ The submission does not include byte-budget or operation-group timeline
 eviction, degraded-history recovery, additional corruption modes, exhaustive
 allocation-failure injection, randomized oracle testing, fuzzing,
 cross-language golden fixtures, production symbol audits, Android `x86_64`,
-emulator tests, or CI. These remain valid long-term work after the physical
-device vertical slice is reliable.
+emulator tests, or CI. These remain valid post-submission hardening work.
 
 ## Built with Codex
 
@@ -150,3 +155,4 @@ This is a selective submission record, not a prompt transcript.
 | 2026-07-20 | Host-native submission slice | Author the table here; target the physical Galaxy S25 Ultra and `arm64-v8a`; keep host builds in Bash/Clang; allow only minimal Android CMake; use copied JSON v1, 64 full frames, and size-only corruption; defer the named hardening work | Implemented the real table, stable hooks, generic timeline, immutable snapshot adapter, invariant validator, isolated corruption/restore flow, JSON encoder, deterministic tests, and synchronized documentation | `./scripts/test-native.sh` compiled under strict C11 warnings with ASan/UBSan and all 6 required native tests passed; no Android validation is claimed yet |
 | 2026-07-20 | Pre-Android native-slice checkpoint | Require a concise, implementation-preserving handoff with exact evidence before JNI work; do not install or commit | Audited the implemented files, Git state, limitations, and remaining Android/JNI sequence and recorded them in `docs/native-slice-status.md` | Native suite rerun: 6/6 passed; Bash syntax and strict inspection-disabled core compile exited 0; report is 74 lines; no `HEAD`, staged changes, or tracked diff |
 | 2026-07-20 | First Android/JNI/Compose vertical slice | Keep the installed SDK/NDK/CMake/JBR immutable; permit only pinned project dependency downloads; package `arm64-v8a` only; after one failed local ADB query, decline the retry while the Mac and phone are on different networks and defer device work | Added the reproducible Gradle app, strict C11 Android target, copied JNI calls and full-timeline contract, serialized Kotlin owner, and minimal interactive/deterministic Compose inspector | Native suite passed 6/6; `./gradlew :app:assembleDebug` passed; APK metadata reports target API 36 and only `arm64-v8a`; JNI signatures match; the ADB server failed to start before device contact, so no physical validation is claimed |
+| 2026-07-20 | Physical-device validation and human-directed UI/lifecycle iteration | Keep the vertical timeline; defer graph and horizontal history; constrain the scrolling viewport to safe drawing bounds; make the historical return action explicit; retain the native session across configuration recreation but defer process-death restoration | Ran targeted USB installation, launch, process/focus, and logcat checks; implemented the inset, Material action, and ViewModel ownership changes in response to physical findings; consolidated the evidence without treating manual observations as automation | Automated native and Android builds passed; USB launch loaded the JNI library with no crash or fatal signal; human light/dark testing verified system-bar clearance and contrast, the **Return to live** action, operations, and preservation of the 17-frame timeline, frame 3 selection, and scroll position |

@@ -1,5 +1,10 @@
 # Android/JNI slice status
 
+> Historical pre-device checkpoint: current USB device results and manual UI
+> findings supersede the device-status portions of this report. See
+> [current physical-device validation](device-validation.md). The remainder is preserved
+> as recorded before physical validation.
+
 Checkpoint: 2026-07-20. Both slices build; device work is intentionally deferred.
 
 ## Verified toolchain and dependencies
