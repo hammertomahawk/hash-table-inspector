@@ -13,7 +13,7 @@ S25 Ultra running API 36. See the consolidated
 ## Install on Android
 
 The hackathon APK requires Android 8.0 / API 26 or newer and an `arm64-v8a`
-device. Download `debug-app.apk` from the repository's
+device. Download `hash-table-inspector-arm64-v8a.apk` from the repository's
 [Releases page](https://github.com/hammertomahawk/hash-table-inspector/releases).
 This release asset is byte-for-byte the same APK supplied directly to the
 judges (SHA-256
@@ -22,7 +22,7 @@ judges (SHA-256
 Sideload it by opening the downloaded APK, or install it with Platform-Tools:
 
 ```bash
-adb install -r debug-app.apk
+adb install -r hash-table-inspector-arm64-v8a.apk
 ```
 
 Android may ask you to allow installation from the browser, file manager, or
