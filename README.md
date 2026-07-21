@@ -10,6 +10,25 @@ slice builds for `arm64-v8a` and is physically validated on a Samsung Galaxy
 S25 Ultra running API 36. See the consolidated
 [physical-device validation](docs/device-validation.md) evidence.
 
+## Install on Android
+
+The hackathon APK requires Android 8.0 / API 26 or newer and an `arm64-v8a`
+device. Download `debug-app.apk` from the repository's
+[Releases page](https://github.com/hammertomahawk/hash-table-inspector/releases).
+This release asset is byte-for-byte the same APK supplied directly to the
+judges (SHA-256
+`2bf9444a05856af2481be5531b03dd3c00e94aa05bc7c54637e149aa60b8dbd0`).
+
+Sideload it by opening the downloaded APK, or install it with Platform-Tools:
+
+```bash
+adb install -r debug-app.apk
+```
+
+Android may ask you to allow installation from the browser, file manager, or
+other unknown app source used to open the APK. After launching, tap
+**Run deterministic demo** for the complete evaluation path.
+
 ## Run the native suite
 
 ```bash
@@ -99,7 +118,7 @@ without the timeline, adapter, JSON, JNI debug surface, or corruption code.
 ## Research and toolchain status
 
 Initial research on 2026-07-18 inspected
-[hammertomahawk/projects#26](https://github.com/hammertomahawk/projects/issues/26),
+[hammertomahawk/hash-table-inspector#1](https://github.com/hammertomahawk/hash-table-inspector/issues/1),
 the local checkout, and the available toolchain. The issue proposes a broad
 data-structure introspection engine; this repository deliberately starts with
 one reliable hash-table vertical slice and defers a DSL and generic reflection.
@@ -145,6 +164,11 @@ allocation-failure injection, randomized oracle testing, fuzzing,
 cross-language golden fixtures, production symbol audits, Android `x86_64`,
 emulator tests, or CI. These remain valid post-submission hardening work.
 
+## License
+
+Copyright 2026 Fenris Embedded, LLC. Released under the
+[MIT License](LICENSE).
+
 ## Built with Codex
 
 This is a selective submission record, not a prompt transcript.
@@ -156,3 +180,4 @@ This is a selective submission record, not a prompt transcript.
 | 2026-07-20 | Pre-Android native-slice checkpoint | Require a concise, implementation-preserving handoff with exact evidence before JNI work; do not install or commit | Audited the implemented files, Git state, limitations, and remaining Android/JNI sequence and recorded them in `docs/native-slice-status.md` | Native suite rerun: 6/6 passed; Bash syntax and strict inspection-disabled core compile exited 0; report is 74 lines; no `HEAD`, staged changes, or tracked diff |
 | 2026-07-20 | First Android/JNI/Compose vertical slice | Keep the installed SDK/NDK/CMake/JBR immutable; permit only pinned project dependency downloads; package `arm64-v8a` only; after one failed local ADB query, decline the retry while the Mac and phone are on different networks and defer device work | Added the reproducible Gradle app, strict C11 Android target, copied JNI calls and full-timeline contract, serialized Kotlin owner, and minimal interactive/deterministic Compose inspector | Native suite passed 6/6; `./gradlew :app:assembleDebug` passed; APK metadata reports target API 36 and only `arm64-v8a`; JNI signatures match; the ADB server failed to start before device contact, so no physical validation is claimed |
 | 2026-07-20 | Physical-device validation and human-directed UI/lifecycle iteration | Keep the vertical timeline; defer graph and horizontal history; constrain the scrolling viewport to safe drawing bounds; make the historical return action explicit; retain the native session across configuration recreation but defer process-death restoration | Ran targeted USB installation, launch, process/focus, and logcat checks; implemented the inset, Material action, and ViewModel ownership changes in response to physical findings; consolidated the evidence without treating manual observations as automation | Automated native and Android builds passed; USB launch loaded the JNI library with no crash or fatal signal; human light/dark testing verified system-bar clearance and contrast, the **Return to live** action, operations, and preservation of the 17-frame timeline, frame 3 selection, and scroll position |
+| 2026-07-21 | Public submission packaging | Publish the exact judge-supplied APK as a release asset rather than commit a binary; add the MIT license and public source-issue link | Located and fingerprinted the validated artifact, added concise installation guidance, and prepared the public release metadata | Local judge copy and validated build output matched byte-for-byte; release download checksum and public README links were checked after publishing |
